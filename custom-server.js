@@ -12,6 +12,9 @@ const origCreate = http.createServer.bind(http);
 // so the request-detail header sanitizer redacts it too.
 const PEER_TOKEN = crypto.randomBytes(24).toString("hex");
 process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
+process.env.BASE_URL = process.env.BASE_URL || "https://9router.harumon-japanese.com";
+process.env.NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://9router.harumon-japanese.com";
+
 
 let backgroundRefreshStarted = false;
 
@@ -125,15 +128,20 @@ http.createServer = (...args) => {
   return server;
 };
 
-if (require.main === module) {
-  const standalone = path.join(__dirname, "server.js");
-  if (fs.existsSync(standalone)) {
-    require(standalone);
-  } else {
-    // Repo checkout has no standalone build next to us. `next start` builds its HTTP
-    // server in-process, so the wrapper above still sanitizes every request.
-    const nextBin = require.resolve("next/dist/bin/next");
-    process.argv = [process.argv[0], nextBin, "start", ...process.argv.slice(2)];
-    require(nextBin);
-  }
+// Standalone server candidate finder (Hostinger Passenger Fix)
+const standaloneCandidates = [
+  path.join(__dirname, "server.js"),
+  path.join(__dirname, ".next", "standalone", "server.js"),
+];
+const standalone = standaloneCandidates.find((p) => fs.existsSync(p));
+
+if (standalone) {
+  require(standalone);
+} else {
+  // Repo checkout has no standalone build next to us. `next start` builds its HTTP
+  // server in-process, so the wrapper above still sanitizes every request.
+  const nextBin = require.resolve("next/dist/bin/next");
+  process.argv = [process.argv[0], nextBin, "start", ...process.argv.slice(2)];
+  require(nextBin);
 }
+
