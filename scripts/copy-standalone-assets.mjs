@@ -37,6 +37,25 @@ export function copyStandaloneAssets({ projectRoot = process.cwd(), distDir = pr
     cpSync(serverWrapperSource, serverWrapperDestination, { force: true });
     console.log(`[standalone-assets] Copied custom-server.js to ${serverWrapperDestination}`);
   }
+
+  // Hostinger LiteSpeed Resilience: Ensure auto-fix.php survives in public_html
+  try {
+    const autoFixSource = resolve(projectRoot, "public", "auto-fix.php");
+    if (existsSync(autoFixSource)) {
+      const candidates = [
+        resolve(projectRoot, "../../../public_html"),
+        resolve(projectRoot, "../../../../public_html"),
+      ];
+      for (const pubDir of candidates) {
+        if (existsSync(pubDir)) {
+          cpSync(autoFixSource, resolve(pubDir, "auto-fix.php"), { force: true });
+          console.log(`[standalone-assets] Copied auto-fix.php to ${pubDir}`);
+        }
+      }
+    }
+  } catch {
+    // Fail-open
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(dirname(fileURLToPath(import.meta.url)), "copy-standalone-assets.mjs")) {

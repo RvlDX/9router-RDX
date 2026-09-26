@@ -15,6 +15,36 @@ process.env.NINEROUTER_PEER_TOKEN = PEER_TOKEN;
 process.env.BASE_URL = process.env.BASE_URL || "https://9router.harumon-japanese.com";
 process.env.NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://9router.harumon-japanese.com";
 
+// Auto-restore auto-fix.php and environment rules in public_html across rebuilds
+try {
+  const publicHtmlDir = path.resolve(__dirname, "../../../public_html");
+  if (fs.existsSync(publicHtmlDir)) {
+    const targetFix = path.join(publicHtmlDir, "auto-fix.php");
+    const sourceFix = path.join(__dirname, "public", "auto-fix.php");
+    if (fs.existsSync(sourceFix)) {
+      fs.copyFileSync(sourceFix, targetFix);
+    }
+    const htaccess = path.join(publicHtmlDir, ".htaccess");
+    if (fs.existsSync(htaccess)) {
+      let ht = fs.readFileSync(htaccess, "utf8");
+      let changed = false;
+      if (!ht.includes("auto-fix.php")) {
+        ht += `\n<Files "auto-fix.php">\n  PassengerEnabled off\n</Files>\n`;
+        changed = true;
+      }
+      if (!ht.includes("BASE_URL")) {
+        ht += `\nSetEnv BASE_URL "https://9router.harumon-japanese.com"\nSetEnv NEXT_PUBLIC_BASE_URL "https://9router.harumon-japanese.com"\n`;
+        changed = true;
+      }
+      if (changed) {
+        fs.writeFileSync(htaccess, ht, "utf8");
+      }
+    }
+  }
+} catch {
+  // Fail-open
+}
+
 
 let backgroundRefreshStarted = false;
 
